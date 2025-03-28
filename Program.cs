@@ -1,5 +1,6 @@
-﻿using System;
+﻿﻿﻿﻿﻿﻿using System;
 using System.IO;
+using System.Collections.Generic;
 
 namespace ProjConf
 {
@@ -91,20 +92,218 @@ Project license information.";
         }
     }
 
+    public class GitignoreGenerator : IFileGenerator
+    {
+        public void Generate(string path)
+        {
+            var content = @"# Visual Studio files
+.vs/
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+ENV/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.env
+.env.test
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.iml
+.project
+.classpath
+.settings/
+.vs/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db";
+
+            File.WriteAllText(Path.Combine(path, ".gitignore"), content);
+        }
+    }
+
+    public class StackSpecificGenerator : IFileGenerator
+    {
+        private readonly string _stack;
+        
+        public StackSpecificGenerator(string stack)
+        {
+            _stack = stack;
+        }
+
+        public void Generate(string path)
+        {
+            switch (_stack)
+            {
+                case "csharp":
+                    GenerateCSharpFiles(path);
+                    break;
+                case "html":
+                    GenerateHtmlFiles(path);
+                    break;
+                case "python":
+                    GeneratePythonFiles(path);
+                    break;
+            }
+        }
+
+        private void GenerateCSharpFiles(string path)
+        {
+            var projectName = new DirectoryInfo(path).Name;
+            var csprojContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>";
+
+            File.WriteAllText(Path.Combine(path, $"{projectName}.csproj"), csprojContent);
+        }
+
+        private void GenerateHtmlFiles(string path)
+        {
+            var htmlContent = @"<!DOCTYPE html>
+<html lang=""en"">
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>Project Title</title>
+    <link rel=""stylesheet"" href=""style.css"">
+</head>
+<body>
+    <h1>Welcome to Project Title</h1>
+    
+    <script src=""script.js""></script>
+</body>
+</html>";
+
+            var cssContent = @"/* Reset default styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    padding: 20px;
+}
+
+h1 {
+    color: #333;
+    margin-bottom: 20px;
+}";
+
+            var jsContent = @"// Add your JavaScript code here
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('Website loaded successfully!');
+});";
+
+            File.WriteAllText(Path.Combine(path, "index.html"), htmlContent);
+            File.WriteAllText(Path.Combine(path, "style.css"), cssContent);
+            File.WriteAllText(Path.Combine(path, "script.js"), jsContent);
+        }
+
+        private void GeneratePythonFiles(string path)
+        {
+            var requirementsContent = @"# Add your Python dependencies here
+# Example:
+# flask==2.0.1
+# requests==2.26.0
+# python-dotenv==0.19.0";
+
+            File.WriteAllText(Path.Combine(path, "requirements.txt"), requirementsContent);
+        }
+    }
+
     public class Program
     {
         public static void Main(string[] args)
         {
             try
             {
-                if (args.Length != 1)
+                if (args.Length == 0 || (args.Length > 1 && args[1] == "--stack" && args.Length == 2))
                 {
-                    Console.WriteLine("Usage: projconf <directory>");
-                    Console.WriteLine("Example: projconf myproject");
+                    Console.WriteLine("Usage: projconf <directory> [--stack <stack>]");
+                    Console.WriteLine("Example: projconf myproject --stack csharp");
+                    Console.WriteLine("\nAvailable stacks:");
+                    Console.WriteLine("  csharp    - C# project");
+                    Console.WriteLine("  html      - HTML/CSS/JS project");
+                    Console.WriteLine("  python    - Python project");
                     return;
                 }
 
                 string projectPath = args[0];
+                string? stack = null;
+
+                // Parse --stack parameter
+                for (int i = 1; i < args.Length; i++)
+                {
+                    if (args[i] == "--stack" && i + 1 < args.Length)
+                    {
+                        stack = args[i + 1].ToLower();
+                        if (stack != "csharp" && stack != "html" && stack != "python")
+                        {
+                            Console.WriteLine($"Invalid stack: {stack}");
+                            Console.WriteLine("Available stacks: csharp, html, python");
+                            return;
+                        }
+                        break;
+                    }
+                }
 
                 // Convert relative path to absolute path
                 if (!Path.IsPathRooted(projectPath))
@@ -119,11 +318,17 @@ Project license information.";
                 }
 
                 // Initialize generators
-                var generators = new IFileGenerator[]
+                var generators = new List<IFileGenerator>
                 {
                     new ClineruleGenerator(),
-                    new ReadmeGenerator()
+                    new ReadmeGenerator(),
+                    new GitignoreGenerator()
                 };
+
+                if (stack != null)
+                {
+                    generators.Add(new StackSpecificGenerator(stack));
+                }
 
                 // Generate files
                 foreach (var generator in generators)
@@ -135,6 +340,25 @@ Project license information.";
                 Console.WriteLine("Created files:");
                 Console.WriteLine("  - .clinerules");
                 Console.WriteLine("  - readme.md");
+                Console.WriteLine("  - .gitignore");
+                if (stack != null)
+                {
+                    Console.WriteLine($"\nStack-specific files for {stack}:");
+                    switch (stack)
+                    {
+                        case "csharp":
+                            Console.WriteLine("  - .csproj");
+                            break;
+                        case "html":
+                            Console.WriteLine("  - index.html");
+                            Console.WriteLine("  - style.css");
+                            Console.WriteLine("  - script.js");
+                            break;
+                        case "python":
+                            Console.WriteLine("  - requirements.txt");
+                            break;
+                    }
+                }
             }
             catch (Exception ex)
             {

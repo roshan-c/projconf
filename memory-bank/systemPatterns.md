@@ -5,11 +5,24 @@
 graph TD
     CLI[Command Line Interface] --> Parser[Argument Parser]
     Parser --> Validator[Input Validator]
-    Validator --> Generator[File Generator]
+    Validator --> StackSelector[Stack Selector]
+    StackSelector --> Generator[File Generator]
+    
     Generator --> ClinerulesMaker[.clinerules Creator]
     Generator --> ReadmeMaker[README.md Creator]
+    Generator --> GitignoreMaker[.gitignore Creator]
+    Generator --> StackSpecific[Stack-Specific Files]
+    
+    StackSpecific --> CSharpFiles[C# Files]
+    StackSpecific --> HtmlFiles[HTML/CSS/JS Files]
+    StackSpecific --> PythonFiles[Python Files]
+    
     ClinerulesMaker --> FileSystem[File System]
     ReadmeMaker --> FileSystem
+    GitignoreMaker --> FileSystem
+    CSharpFiles --> FileSystem
+    HtmlFiles --> FileSystem
+    PythonFiles --> FileSystem
 ```
 
 ## Core Components
@@ -23,6 +36,7 @@ graph TD
 - Validates directory path
 - Handles relative and absolute paths
 - Manages command-line options
+- Processes stack parameter
 
 ### 3. File Generator
 - Creates files using templates
@@ -51,10 +65,40 @@ Manages different file generation strategies based on context.
 
 ### File Generation
 ```csharp
-// Example structure
 public interface IFileGenerator
 {
     void Generate(string path);
+}
+
+public class StackSpecificGenerator : IFileGenerator
+{
+    private readonly string _stack;
+    public StackSpecificGenerator(string stack) 
+    {
+        _stack = stack;
+    }
+
+    public void Generate(string path)
+    {
+        switch (_stack)
+        {
+            case "csharp":
+                GenerateCSharpFiles(path);
+                break;
+            case "html":
+                GenerateHtmlFiles(path);
+                break;
+            case "python":
+                GeneratePythonFiles(path);
+                break;
+            default:
+                throw new ArgumentException("Invalid stack");
+        }
+    }
+
+    private void GenerateCSharpFiles(string path) { ... }
+    private void GenerateHtmlFiles(string path) { ... }
+    private void GeneratePythonFiles(string path) { ... }
 }
 
 public class ClineruleGenerator : IFileGenerator
@@ -63,6 +107,11 @@ public class ClineruleGenerator : IFileGenerator
 }
 
 public class ReadmeGenerator : IFileGenerator
+{
+    public void Generate(string path) { ... }
+}
+
+public class GitignoreGenerator : IFileGenerator
 {
     public void Generate(string path) { ... }
 }

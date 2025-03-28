@@ -1,8 +1,8 @@
 # Active Context: Project Configuration Tool
 
 ## Current Work Focus
-- Initial project setup
-- Command-line argument handling
+- Stack-specific project generation
+- Command-line argument enhancement
 - File generation implementation
 - Path management
 
@@ -12,18 +12,22 @@
 - Core documentation established
 
 ## Next Steps
-1. Implement Program.cs main logic
-2. Add command-line argument parsing
-3. Create file generation functionality
-4. Set up error handling
+1. Add stack parameter to Program.cs
+2. Implement stack-specific file generation:
+   - C#: .csproj file
+   - HTML: index.html, style.css, script.js
+   - Python: requirements.txt
+3. Create generic .gitignore
+4. Update installer
 5. Test cross-platform compatibility
-6. Document PATH setup process
+6. Document usage with stack parameter
 
 ## Active Decisions
 1. File Generation Strategy
-   - Use template-based approach
+   - Template-based approach for each stack
    - Implement atomic file operations
    - Add validation before file creation
+   - Single generic .gitignore for all stacks
 
 2. Error Handling
    - User-friendly error messages

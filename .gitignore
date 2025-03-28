@@ -4,7 +4,7 @@
 *.userosscache
 *.sln.docstates
 .vscode
-
+/output
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/

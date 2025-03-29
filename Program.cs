@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.IO;
 using System.Collections.Generic;
 
@@ -183,7 +183,7 @@ Thumbs.db";
         {
             switch (_stack)
             {
-                case "csharp":
+                case "cs":
                     GenerateCSharpFiles(path);
                     break;
                 case "html":
@@ -197,19 +197,31 @@ Thumbs.db";
 
         private void GenerateCSharpFiles(string path)
         {
-            var projectName = new DirectoryInfo(path).Name;
-            var csprojContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
+            try
+            {
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "dotnet",
+                    Arguments = "new console",
+                    WorkingDirectory = path,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+                using var process = System.Diagnostics.Process.Start(startInfo);
+                process?.WaitForExit();
 
-</Project>";
-
-            File.WriteAllText(Path.Combine(path, $"{projectName}.csproj"), csprojContent);
+                if (process?.ExitCode != 0)
+                {
+                    throw new Exception("Failed to create C# console application");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error creating C# project: {ex.Message}");
+            }
         }
 
         private void GenerateHtmlFiles(string path)
@@ -278,9 +290,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (args.Length == 0 || (args.Length > 1 && args[1] == "--stack" && args.Length == 2))
                 {
                     Console.WriteLine("Usage: projconf <directory> [--stack <stack>]");
-                    Console.WriteLine("Example: projconf myproject --stack csharp");
+                    Console.WriteLine("Example: projconf myproject --stack cs");
                     Console.WriteLine("\nAvailable stacks:");
-                    Console.WriteLine("  csharp    - C# project");
+                    Console.WriteLine("  cs    - C# project");
                     Console.WriteLine("  html      - HTML/CSS/JS project");
                     Console.WriteLine("  python    - Python project");
                     return;
@@ -295,26 +307,34 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (args[i] == "--stack" && i + 1 < args.Length)
                     {
                         stack = args[i + 1].ToLower();
-                        if (stack != "csharp" && stack != "html" && stack != "python")
+                        if (stack != "cs" && stack != "html" && stack != "python")
                         {
                             Console.WriteLine($"Invalid stack: {stack}");
-                            Console.WriteLine("Available stacks: csharp, html, python");
+                            Console.WriteLine("Available stacks: cs, html, python");
                             return;
                         }
                         break;
                     }
                 }
 
-                // Convert relative path to absolute path
-                if (!Path.IsPathRooted(projectPath))
+                // Handle special ".." case to use current directory
+                if (projectPath == "..")
                 {
-                    projectPath = Path.GetFullPath(projectPath);
+                    projectPath = Directory.GetCurrentDirectory();
                 }
-
-                // Create directory if it doesn't exist
-                if (!Directory.Exists(projectPath))
+                else
                 {
-                    Directory.CreateDirectory(projectPath);
+                    // Convert relative path to absolute path
+                    if (!Path.IsPathRooted(projectPath))
+                    {
+                        projectPath = Path.GetFullPath(projectPath);
+                    }
+
+                    // Create directory if it doesn't exist
+                    if (!Directory.Exists(projectPath))
+                    {
+                        Directory.CreateDirectory(projectPath);
+                    }
                 }
 
                 // Initialize generators
@@ -346,8 +366,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     Console.WriteLine($"\nStack-specific files for {stack}:");
                     switch (stack)
                     {
-                        case "csharp":
-                            Console.WriteLine("  - .csproj");
+                        case "cs":
+                            Console.WriteLine("  - Program.cs");
+                            Console.WriteLine("  - projectname.csproj");
                             break;
                         case "html":
                             Console.WriteLine("  - index.html");

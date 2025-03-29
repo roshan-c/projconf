@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿using System;
 using System.IO;
 using System.Collections.Generic;
 
@@ -192,6 +192,9 @@ Thumbs.db";
                 case "python":
                     GeneratePythonFiles(path);
                     break;
+                case "node":
+                    GenerateNodeFiles(path);
+                    break;
             }
         }
 
@@ -221,6 +224,54 @@ Thumbs.db";
             catch (Exception ex)
             {
                 throw new Exception($"Error creating C# project: {ex.Message}");
+            }
+        }
+
+        private void GenerateNodeFiles(string path)
+        {
+            try
+            {
+                var packageJson = @"{
+  ""name"": ""project-name"",
+  ""version"": ""1.0.0"",
+  ""description"": """",
+  ""main"": ""index.js"",
+  ""scripts"": {
+    ""start"": ""node index.js"",
+    ""test"": ""echo \""Error: no test specified\"" && exit 1""
+  },
+  ""keywords"": [],
+  ""author"": """",
+  ""license"": ""ISC""
+}";
+
+                var indexJs = @"console.log('Hello, Node.js!');";
+
+                File.WriteAllText(Path.Combine(path, "package.json"), packageJson);
+                File.WriteAllText(Path.Combine(path, "index.js"), indexJs);
+
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "npm",
+                    Arguments = "install",
+                    WorkingDirectory = path,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = System.Diagnostics.Process.Start(startInfo);
+                process?.WaitForExit();
+
+                if (process?.ExitCode != 0)
+                {
+                    throw new Exception("Failed to initialize npm project");
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error creating Node.js project: {ex.Message}");
             }
         }
 
@@ -292,9 +343,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     Console.WriteLine("Usage: projconf <directory> [--stack <stack>]");
                     Console.WriteLine("Example: projconf myproject --stack cs");
                     Console.WriteLine("\nAvailable stacks:");
-                    Console.WriteLine("  cs    - C# project");
+                    Console.WriteLine("  cs        - C# project");
                     Console.WriteLine("  html      - HTML/CSS/JS project");
                     Console.WriteLine("  python    - Python project");
+                    Console.WriteLine("  node      - Node.js project");
                     return;
                 }
 
@@ -307,10 +359,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (args[i] == "--stack" && i + 1 < args.Length)
                     {
                         stack = args[i + 1].ToLower();
-                        if (stack != "cs" && stack != "html" && stack != "python")
+                        if (stack != "cs" && stack != "html" && stack != "python" && stack != "node")
                         {
                             Console.WriteLine($"Invalid stack: {stack}");
-                            Console.WriteLine("Available stacks: cs, html, python");
+                            Console.WriteLine("Available stacks: cs, html, python, node");
                             return;
                         }
                         break;
@@ -377,6 +429,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             break;
                         case "python":
                             Console.WriteLine("  - requirements.txt");
+                            break;
+                        case "node":
+                            Console.WriteLine("  - package.json");
+                            Console.WriteLine("  - index.js");
+                            Console.WriteLine("  - node_modules/");
                             break;
                     }
                 }
